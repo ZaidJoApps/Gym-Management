@@ -12,6 +12,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Ashhab Gym';
 
   @override
+  String get welcome => 'Welcome to Ashhab Gym';
+
+  @override
+  String get testButton => 'Test Button';
+
+  @override
   String get registerMember => 'Register New Member';
 
   @override

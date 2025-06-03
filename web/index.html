@@ -36,23 +36,57 @@
     // The value below is injected by flutter build, do not touch.
     const serviceWorkerVersion = null;
   </script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js"></script>
+  
+  <!-- Initialize Firebase -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAMaIo--OHhP41IDVYpPwHF27zjHRCoWk4",
+      authDomain: "gym-managment-2b975.firebaseapp.com",
+      projectId: "gym-managment-2b975",
+      storageBucket: "gym-managment-2b975.firebasestorage.app",
+      messagingSenderId: "1084865897218",
+      appId: "1:1084865897218:web:9e71a749dc9373b8b2981b",
+      measurementId: "G-LQEMQXJ2ZV"
+    };
+
+    // Initialize Firebase with error handling
+    try {
+      firebase.initializeApp(firebaseConfig);
+      console.log('Firebase initialized successfully');
+    } catch (e) {
+      console.error('Error initializing Firebase:', e);
+    }
+  </script>
+  
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
 </head>
 <body>
   <script>
     window.addEventListener('load', function(ev) {
-      // Download main.dart.js
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
-        },
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
-          });
-        }
-      });
+      try {
+        // Download main.dart.js
+        _flutter.loader.loadEntrypoint({
+          serviceWorker: {
+            serviceWorkerVersion: serviceWorkerVersion,
+          },
+          onEntrypointLoaded: async function(engineInitializer) {
+            try {
+              const appRunner = await engineInitializer.initializeEngine();
+              await appRunner.runApp();
+            } catch (e) {
+              console.error('Error running app:', e);
+              document.body.innerHTML = 'Error running app: ' + e;
+            }
+          }
+        });
+      } catch (e) {
+        console.error('Error loading entrypoint:', e);
+        document.body.innerHTML = 'Error loading app: ' + e;
+      }
     });
   </script>
 </body>

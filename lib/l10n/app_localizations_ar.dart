@@ -9,7 +9,13 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get appTitle => 'نادي أصحاب الرياضي';
+  String get appTitle => 'صالة أشهب';
+
+  @override
+  String get welcome => 'مرحباً بكم في صالة أشهب';
+
+  @override
+  String get testButton => 'زر تجريبي';
 
   @override
   String get registerMember => 'تسجيل عضو جديد';

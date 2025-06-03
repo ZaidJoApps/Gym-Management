@@ -101,6 +101,18 @@ abstract class AppLocalizations {
   /// **'Ashhab Gym'**
   String get appTitle;
 
+  /// No description provided for @welcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Ashhab Gym'**
+  String get welcome;
+
+  /// No description provided for @testButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Button'**
+  String get testButton;
+
   /// No description provided for @registerMember.
   ///
   /// In en, this message translates to:

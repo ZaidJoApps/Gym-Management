@@ -1,6 +1,8 @@
 {
   "@@locale": "en",
   "appTitle": "Ashhab Gym",
+  "welcome": "Welcome to Ashhab Gym",
+  "testButton": "Test Button",
   "registerMember": "Register New Member",
   "viewMembers": "View Members",
   "memberName": "Member Name",

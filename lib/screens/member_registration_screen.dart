@@ -79,7 +79,21 @@ class _MemberRegistrationScreenState extends State<MemberRegistrationScreen> {
       await FirebaseFirestore.instance
           .collection('members')
           .doc(member.id)
-          .set(member.toJson());
+          .set(member.toJson(), SetOptions(merge: true))
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${AppLocalizations.of(context)!.memberRegistered} (Offline Mode)'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+              return;
+            },
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -91,13 +105,15 @@ class _MemberRegistrationScreenState extends State<MemberRegistrationScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
+      debugPrint('Error registering member: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorRegisteringMember),
-            backgroundColor: Colors.red,
+            content: Text('${AppLocalizations.of(context)!.errorRegisteringMember}\nThe data will be synced when online.'),
+            backgroundColor: Colors.orange,
           ),
         );
+        Navigator.pop(context);
       }
     }
   }

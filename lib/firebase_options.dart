@@ -17,8 +17,8 @@ class DefaultFirebaseOptions {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return const FirebaseOptions(
-          apiKey: 'AIzaSyAMaIo--OHhP41IDVYpPwHF27zjHRCoWk4',
-          appId: '1:1084865897218:android:9e71a749dc9373b8b2981b',
+          apiKey: 'AIzaSyAqw9GMuYZUdly7ocQ5QQVWoYGFwMg-iRw',
+          appId: '1:1084865897218:android:0eb703cb2ff50addb2981b',
           messagingSenderId: '1084865897218',
           projectId: 'gym-managment-2b975',
           storageBucket: 'gym-managment-2b975.firebasestorage.app',

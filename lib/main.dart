@@ -5,24 +5,122 @@ import 'package:provider/provider.dart';
 import 'screens/member_registration_screen.dart';
 import 'screens/members_list_screen.dart';
 import 'firebase_options.dart';
-import 'services/notification_service.dart';
 import 'providers/language_provider.dart';
 import 'l10n/app_localizations.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Create a global instance of NotificationService
-final notificationService = NotificationService();
+Future<void> main() async {
+  // Catch all errors in release mode
+  if (const bool.fromEnvironment('dart.vm.product')) {
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      debugPrint('Error in release mode: ${details.exception}');
+      return Material(
+        child: Container(
+          alignment: Alignment.center,
+          child: const Text(
+            'An error occurred.\nPlease restart the app.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      );
+    };
+  }
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => LanguageProvider(),
-      child: const GymManagementApp(),
-    ),
-  );
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    debugPrint('Flutter binding initialized');
+    
+    // Initialize Firebase with offline persistence
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).then((_) async {
+      // Enable offline persistence with a larger cache size
+      await FirebaseFirestore.instance.enablePersistence(
+        const PersistenceSettings(synchronizeTabs: true),
+      ).catchError((e) {
+        debugPrint('Error enabling Firestore persistence: $e');
+      });
+      
+      // Set network timeout and cache size
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+        host: 'firestore.googleapis.com',
+        sslEnabled: true
+      );
+      
+      debugPrint('Firebase initialized with offline persistence');
+    }).catchError((error) {
+      debugPrint('Firebase initialization error: $error');
+      // Continue without Firebase if there's an error
+      return null;
+    });
+    
+    runApp(
+      ChangeNotifierProvider(
+        create: (_) => LanguageProvider(),
+        child: const GymManagementApp(),
+      ),
+    );
+    debugPrint('App started successfully');
+  } catch (e, stackTrace) {
+    debugPrint('Error starting app: $e');
+    debugPrint('Stack trace: $stackTrace');
+    // Run a basic version of the app if there are initialization errors
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          appBar: AppBar(
+            title: const Text('Ashhab Gym'),
+          ),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 64,
+                  color: Colors.orange,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Network Connection Issue',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'The app is running in offline mode.\nSome features may be limited.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  e.toString(),
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    main(); // Retry initialization
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry Connection'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class GymManagementApp extends StatelessWidget {
@@ -30,58 +128,67 @@ class GymManagementApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LanguageProvider>(
-      builder: (context, languageProvider, child) {
-        return MaterialApp(
-          title: 'Ashhab Gym',
-          locale: languageProvider.currentLocale,
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [
-            Locale('en'), // English
-            Locale('ar'), // Arabic
-          ],
-          theme: ThemeData(
-            primarySwatch: Colors.blue,
-            scaffoldBackgroundColor: Colors.white,
-            useMaterial3: true,
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              elevation: 0,
-            ),
-            cardTheme: CardTheme(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-            ),
-            textTheme: TextTheme(
-              bodyLarge: TextStyle(
-                fontFamily: languageProvider.isArabic ? 'Cairo' : null,
-              ),
-              bodyMedium: TextStyle(
-                fontFamily: languageProvider.isArabic ? 'Cairo' : null,
-              ),
-            ),
-            elevatedButtonTheme: ElevatedButtonThemeData(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
+    final languageProvider = Provider.of<LanguageProvider>(context);
+    
+    // Show a loading screen while the language provider initializes
+    if (!languageProvider.isInitialized) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    return MaterialApp(
+      title: 'Ashhab Gym',
+      locale: languageProvider.currentLocale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'), // English
+        Locale('ar'), // Arabic
+      ],
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: Colors.white,
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        cardTheme: CardTheme(
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        ),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(
+            fontFamily: languageProvider.isArabic ? 'Cairo' : null,
+          ),
+          bodyMedium: TextStyle(
+            fontFamily: languageProvider.isArabic ? 'Cairo' : null,
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
             ),
           ),
-          home: const HomeScreen(),
-        );
-      },
+        ),
+      ),
+      home: const HomeScreen(),
     );
   }
 }

@@ -1,6 +1,8 @@
 {
   "@@locale": "ar",
-  "appTitle": "نادي أصحاب الرياضي",
+  "appTitle": "صالة أشهب",
+  "welcome": "مرحباً بكم في صالة أشهب",
+  "testButton": "زر تجريبي",
   "registerMember": "تسجيل عضو جديد",
   "viewMembers": "عرض الأعضاء",
   "memberName": "اسم العضو",

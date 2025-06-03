@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/member.dart';
-import '../services/notification_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/ashhab_app_bar.dart';
@@ -15,7 +14,6 @@ class MembersListScreen extends StatefulWidget {
 
 class _MembersListScreenState extends State<MembersListScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final _notificationService = NotificationService();
   final _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -36,15 +34,20 @@ class _MembersListScreenState extends State<MembersListScreen> with SingleTicker
     return FirebaseFirestore.instance
         .collection('members')
         .snapshots()
+        .handleError((error) {
+          debugPrint('Error fetching members: $error');
+          // Return empty list in case of error
+          return const Stream.empty();
+        })
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Member.fromJson({...doc.data(), 'id': doc.id}))
-          .where((member) => !expiredOnly || member.isExpired)
-          .where((member) => _searchQuery.isEmpty ||
-              member.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              member.name.contains(_searchQuery))
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => Member.fromJson({...doc.data(), 'id': doc.id}))
+              .where((member) => !expiredOnly || member.isExpired)
+              .where((member) => _searchQuery.isEmpty ||
+                  member.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                  member.name.contains(_searchQuery))
+              .toList();
+        });
   }
 
   Future<void> _deleteMember(BuildContext context, Member member) async {
@@ -74,7 +77,21 @@ class _MembersListScreenState extends State<MembersListScreen> with SingleTicker
         await FirebaseFirestore.instance
             .collection('members')
             .doc(member.id)
-            .delete();
+            .delete()
+            .timeout(
+              const Duration(seconds: 5),
+              onTimeout: () {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${l10n.memberDeleted} (Offline Mode)'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+                return;
+              },
+            );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -85,37 +102,15 @@ class _MembersListScreenState extends State<MembersListScreen> with SingleTicker
           );
         }
       } catch (e) {
+        debugPrint('Error deleting member: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(l10n.errorDeletingMember),
-              backgroundColor: Colors.red,
+              content: Text('${l10n.errorDeletingMember}\nChanges will be synced when online.'),
+              backgroundColor: Colors.orange,
             ),
           );
         }
-      }
-    }
-  }
-
-  Future<void> _sendReminder(Member member) async {
-    try {
-      await _notificationService.sendExpiryReminder(member);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Reminder sent successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to send reminder: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
     }
   }
@@ -154,11 +149,24 @@ class _MembersListScreenState extends State<MembersListScreen> with SingleTicker
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                      const Icon(Icons.cloud_off, size: 48, color: Colors.orange),
                       const SizedBox(height: 16),
                       Text(
-                        'Error: ${snapshot.error}',
-                        style: const TextStyle(color: Colors.red),
+                        'Network Error - Showing Cached Data',
+                        style: TextStyle(
+                          color: Colors.orange[700],
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        snapshot.error.toString(),
+                        style: TextStyle(
+                          color: Colors.orange[700],
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -290,23 +298,11 @@ class _MembersListScreenState extends State<MembersListScreen> with SingleTicker
                           ],
                         ],
                       ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (member.isExpired)
-                            IconButton(
-                              icon: const Icon(Icons.notification_important),
-                              color: Colors.red,
-                              onPressed: () => _sendReminder(member),
-                              tooltip: l10n.sendReminder,
-                            ),
-                          IconButton(
-                            icon: const Icon(Icons.delete),
-                            color: Colors.red,
-                            onPressed: () => _deleteMember(context, member),
-                            tooltip: l10n.deleteMember,
-                          ),
-                        ],
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete),
+                        color: Colors.red,
+                        onPressed: () => _deleteMember(context, member),
+                        tooltip: l10n.deleteMember,
                       ),
                       isThreeLine: true,
                     ),
